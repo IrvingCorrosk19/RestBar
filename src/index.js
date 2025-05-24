@@ -15,6 +15,7 @@ const inventoryRoutes = require('./routes/inventory');
 const invoiceRoutes = require('./routes/invoice');
 const notificationRoutes = require('./routes/notification');
 const dashboardRoutes = require('./routes/dashboard');
+const clientRoutes = require('./routes/client');
 
 const app = express();
 const httpServer = createServer(app);
@@ -64,6 +65,7 @@ app.use('/api/inventory', inventoryRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/clients', clientRoutes);
 
 // Iniciar servidor
 const PORT = process.env.PORT || 3001;
