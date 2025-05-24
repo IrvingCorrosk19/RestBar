@@ -256,6 +256,16 @@ model Feedback {
   updatedAt         DateTime          @updatedAt
 }
 
+model Settings {
+  id            Int      @id @default(1)
+  notifications Boolean  @default(true)
+  autoPrint     Boolean  @default(false)
+  language      String   @default("es")
+  darkMode      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
 enum Role {
   ADMIN
   MANAGER
