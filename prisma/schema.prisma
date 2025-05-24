@@ -367,4 +367,129 @@ enum PromotionType {
 enum OrderType {
   KITCHEN
   BAR
+}
+
+model Customer {
+  id        String   @id @default(uuid())
+  name      String
+  document  String?  @unique
+  email     String?  @unique
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relaciones
+  orders    Order[]
+  orderItems OrderItem[] @relation("AssignedToCustomer")
+}
+
+model Table {
+  id        String   @id @default(uuid())
+  number    Int      @unique
+  capacity  Int
+  status    String   @default("AVAILABLE") // AVAILABLE, OCCUPIED, RESERVED
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relaciones
+  orders    Order[]
+  accounts  Account[]
+}
+
+model Account {
+  id        String   @id @default(uuid())
+  type      String   // INDIVIDUAL, SHARED
+  status    String   // ACTIVE, CLOSED
+  tableId   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relaciones
+  table     Table?   @relation(fields: [tableId], references: [id])
+  orders    Order[]
+  splitAccounts SplitAccount[]
+}
+
+model Order {
+  id            String   @id @default(uuid())
+  type          String   // TABLE, BAR, PERSONAL, TAKEAWAY
+  status        String   // PENDING, PREPARING, READY, DELIVERED, CANCELLED
+  paymentStatus String   // PENDING, PARTIAL, PAID, CANCELLED
+  subtotal      Float
+  tax           Float
+  total         Float
+  discount      Float    @default(0)
+  notes         String?
+  tableId       String?
+  customerId    String?
+  accountId     String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relaciones
+  table         Table?    @relation(fields: [tableId], references: [id])
+  customer      Customer? @relation(fields: [customerId], references: [id])
+  account       Account?  @relation(fields: [accountId], references: [id])
+  items         OrderItem[]
+  payments      Payment[]
+  splitAccounts SplitAccount[]
+}
+
+model OrderItem {
+  id            String   @id @default(uuid())
+  orderId       String
+  productId     String
+  quantity      Int
+  price         Float
+  subtotal      Float
+  assignedToCustomerId String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relaciones
+  order         Order    @relation(fields: [orderId], references: [id])
+  product       Product  @relation(fields: [productId], references: [id])
+  assignedToCustomer Customer? @relation("AssignedToCustomer", fields: [assignedToCustomerId], references: [id])
+}
+
+model Payment {
+  id        String   @id @default(uuid())
+  orderId   String
+  amount    Float
+  method    String   // CASH, CARD, TRANSFER
+  status    String   // PENDING, COMPLETED, FAILED
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relaciones
+  order     Order    @relation(fields: [orderId], references: [id])
+}
+
+model SplitAccount {
+  id        String   @id @default(uuid())
+  orderId   String
+  accountId String
+  subtotal  Float
+  status    String   // PENDING, PAID
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relaciones
+  order     Order    @relation(fields: [orderId], references: [id])
+  account   Account  @relation(fields: [accountId], references: [id])
+  items     SplitAccountItem[]
+}
+
+model SplitAccountItem {
+  id            String   @id @default(uuid())
+  splitAccountId String
+  productId     String
+  quantity      Int
+  price         Float
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relaciones
+  splitAccount  SplitAccount @relation(fields: [splitAccountId], references: [id])
+  product       Product      @relation(fields: [productId], references: [id])
 } 
