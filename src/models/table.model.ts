@@ -1,0 +1,5 @@
+number: { type: DataTypes.INTEGER, allowNull: false },
+capacity: { type: DataTypes.INTEGER, allowNull: false },
+status: { type: DataTypes.ENUM('AVAILABLE', 'OCCUPIED', 'RESERVED'), defaultValue: 'AVAILABLE' },
+x: { type: DataTypes.INTEGER, defaultValue: 0 },
+y: { type: DataTypes.INTEGER, defaultValue: 0 }, 

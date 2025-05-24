@@ -1,0 +1,360 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String            @id @default(uuid())
+  email             String            @unique
+  password          String
+  name              String
+  role              Role              @default(WAITER)
+  active            Boolean           @default(true)
+  phone             String?
+  avatar            String?
+  orders            Order[]
+  reservations      Reservation[]
+  notifications     Notification[]
+  customerProfile   CustomerProfile?
+  staffProfile      StaffProfile?
+  performance       StaffPerformance[]
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+}
+
+model CustomerProfile {
+  id                String            @id @default(uuid())
+  user              User              @relation(fields: [userId], references: [id])
+  userId            String            @unique
+  loyaltyPoints     Int               @default(0)
+  preferences       Json?             // Preferencias de comida, alergias, etc.
+  favoriteItems     FavoriteItem[]
+  orderHistory      Order[]
+  reservations      Reservation[]
+  feedback          Feedback[]
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+}
+
+model StaffProfile {
+  id                String            @id @default(uuid())
+  user              User              @relation(fields: [userId], references: [id])
+  userId            String            @unique
+  department        Department
+  schedule          Json?             // Horarios de trabajo
+  performance       StaffPerformance[]
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+}
+
+model StaffPerformance {
+  id                String            @id @default(uuid())
+  staff             StaffProfile      @relation(fields: [staffId], references: [id])
+  staffId           String
+  user              User              @relation(fields: [userId], references: [id])
+  userId            String
+  date              DateTime
+  ordersHandled     Int
+  averageTime       Int               // Tiempo promedio de atención en segundos
+  customerRating    Float?
+  notes             String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+}
+
+model Category {
+  id                String            @id @default(uuid())
+  name              String
+  description       String?
+  image             String?
+  active            Boolean           @default(true)
+  products          Product[]
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+}
+
+model Product {
+  id                String            @id @default(uuid())
+  name              String
+  description       String?
+  price             Float
+  image             String?
+  stock             Int               @default(0)
+  active            Boolean           @default(true)
+  category          Category          @relation(fields: [categoryId], references: [id])
+  categoryId        String
+  orderItems        OrderItem[]
+  inventory         Inventory[]
+  favoriteItems     FavoriteItem[]
+  promotions        Promotion[]
+  preparationTime   Int?              // Tiempo estimado de preparación en minutos
+  cost              Float?            // Costo del producto
+  profitMargin      Float?            // Margen de ganancia
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+}
+
+model Table {
+  id                String            @id @default(uuid())
+  number            Int               @unique
+  capacity          Int
+  status            TableStatus       @default(AVAILABLE)
+  location          String?
+  active            Boolean           @default(true)
+  orders            Order[]
+  reservations      Reservation[]
+  zone              Zone?             @relation(fields: [zoneId], references: [id])
+  zoneId            String?
+  x                 Float?            // Posición X en el plano
+  y                 Float?            // Posición Y en el plano
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+}
+
+model Zone {
+  id                String            @id @default(uuid())
+  name              String
+  description       String?
+  tables            Table[]
+  heatMapData       Json?             // Datos para mapa de calor
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+}
+
+model Order {
+  id                String            @id @default(uuid())
+  status            OrderStatus       @default(PENDING)
+  total             Float
+  notes             String?
+  type              OrderType         @default(KITCHEN)
+  user              User              @relation(fields: [userId], references: [id])
+  userId            String
+  table             Table             @relation(fields: [tableId], references: [id])
+  tableId           String
+  items             OrderItem[]
+  invoice           Invoice?
+  paymentStatus     PaymentStatus     @default(PENDING)
+  paymentMethod     PaymentMethod?
+  customerProfile   CustomerProfile?  @relation(fields: [customerId], references: [id])
+  customerId        String?
+  feedback          Feedback?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+}
+
+model OrderItem {
+  id                String            @id @default(uuid())
+  quantity          Int
+  price             Float
+  notes             String?
+  status            OrderItemStatus   @default(PENDING)
+  order             Order             @relation(fields: [orderId], references: [id])
+  orderId           String
+  product           Product           @relation(fields: [productId], references: [id])
+  productId         String
+  preparationTime   Int?              // Tiempo real de preparación
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+}
+
+model Reservation {
+  id                String            @id @default(uuid())
+  date              DateTime
+  startTime         DateTime
+  endTime           DateTime
+  status            ReservationStatus @default(PENDING)
+  guests            Int
+  notes             String?
+  user              User              @relation(fields: [userId], references: [id])
+  userId            String
+  table             Table             @relation(fields: [tableId], references: [id])
+  tableId           String
+  customerProfile   CustomerProfile?  @relation(fields: [customerId], references: [id])
+  customerId        String?
+  specialRequests   String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+}
+
+model Inventory {
+  id                String            @id @default(uuid())
+  product           Product           @relation(fields: [productId], references: [id])
+  productId         String
+  quantity          Int
+  type              InventoryType
+  notes             String?
+  alertThreshold    Int?              // Umbral para alertas de stock bajo
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+}
+
+model Invoice {
+  id                String            @id @default(uuid())
+  number            String            @unique
+  order             Order             @relation(fields: [orderId], references: [id])
+  orderId           String            @unique
+  subtotal          Float
+  tax               Float
+  total             Float
+  status            InvoiceStatus     @default(PENDING)
+  paymentDetails    Json?             // Detalles del pago
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+}
+
+model Notification {
+  id                String            @id @default(uuid())
+  type              NotificationType
+  title             String
+  message           String
+  read              Boolean           @default(false)
+  user              User              @relation(fields: [userId], references: [id])
+  userId            String
+  priority          NotificationPriority @default(NORMAL)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+}
+
+model Promotion {
+  id                String            @id @default(uuid())
+  name              String
+  description       String?
+  type              PromotionType
+  startDate         DateTime
+  endDate           DateTime
+  discount          Float?
+  products          Product[]
+  conditions        Json?             // Condiciones de la promoción
+  active            Boolean           @default(true)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+}
+
+model FavoriteItem {
+  id                String            @id @default(uuid())
+  customer          CustomerProfile   @relation(fields: [customerId], references: [id])
+  customerId        String
+  product           Product           @relation(fields: [productId], references: [id])
+  productId         String
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+}
+
+model Feedback {
+  id                String            @id @default(uuid())
+  order             Order             @relation(fields: [orderId], references: [id])
+  orderId           String            @unique
+  customer          CustomerProfile   @relation(fields: [customerId], references: [id])
+  customerId        String
+  rating            Int
+  comment           String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  WAITER
+  KITCHEN
+  BAR
+  CASHIER
+}
+
+enum Department {
+  KITCHEN
+  BAR
+  SERVICE
+  MANAGEMENT
+}
+
+enum TableStatus {
+  AVAILABLE
+  OCCUPIED
+  RESERVED
+  MAINTENANCE
+}
+
+enum OrderStatus {
+  PENDING
+  PREPARING
+  READY
+  DELIVERED
+  CANCELLED
+}
+
+enum OrderItemStatus {
+  PENDING
+  PREPARING
+  READY
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  CASH
+  CREDIT_CARD
+  DEBIT_CARD
+  TRANSFER
+  MOBILE_PAYMENT
+}
+
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+enum InventoryType {
+  IN
+  OUT
+  ADJUSTMENT
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  CANCELLED
+  REFUNDED
+}
+
+enum NotificationType {
+  ORDER
+  RESERVATION
+  INVENTORY
+  SYSTEM
+  PROMOTION
+  FEEDBACK
+}
+
+enum NotificationPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum PromotionType {
+  DISCOUNT
+  HAPPY_HOUR
+  COMBO
+  LOYALTY
+  SEASONAL
+}
+
+enum OrderType {
+  KITCHEN
+  BAR
+} 
