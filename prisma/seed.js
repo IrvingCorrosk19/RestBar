@@ -187,7 +187,7 @@ async function main() {
     })
   ]);
 
-  // Crear zonas
+  // Crear zonas primero
   const zones = await Promise.all([
     prisma.zone.create({
       data: {
@@ -209,14 +209,16 @@ async function main() {
     })
   ]);
 
-  // Crear mesas
+  // Crear mesas usando los IDs de las zonas recién creadas
   const tables = await Promise.all([
     // Mesas en Terraza
-    prisma.table.create({
-      data: {
+    prisma.table.upsert({
+      where: { number: 1 },
+      update: {},
+      create: {
         number: 1,
         capacity: 4,
-        status: 'AVAILABLE',
+        status: 'LIBRE',
         location: 'Terraza',
         active: true,
         zoneId: zones[0].id,
@@ -224,11 +226,13 @@ async function main() {
         y: 100
       }
     }),
-    prisma.table.create({
-      data: {
+    prisma.table.upsert({
+      where: { number: 2 },
+      update: {},
+      create: {
         number: 2,
         capacity: 2,
-        status: 'AVAILABLE',
+        status: 'LIBRE',
         location: 'Terraza',
         active: true,
         zoneId: zones[0].id,
@@ -237,11 +241,13 @@ async function main() {
       }
     }),
     // Mesas en Salón Principal
-    prisma.table.create({
-      data: {
+    prisma.table.upsert({
+      where: { number: 3 },
+      update: {},
+      create: {
         number: 3,
         capacity: 6,
-        status: 'AVAILABLE',
+        status: 'LIBRE',
         location: 'Salón Principal',
         active: true,
         zoneId: zones[1].id,
@@ -249,11 +255,13 @@ async function main() {
         y: 200
       }
     }),
-    prisma.table.create({
-      data: {
+    prisma.table.upsert({
+      where: { number: 4 },
+      update: {},
+      create: {
         number: 4,
         capacity: 4,
-        status: 'AVAILABLE',
+        status: 'LIBRE',
         location: 'Salón Principal',
         active: true,
         zoneId: zones[1].id,
@@ -262,11 +270,13 @@ async function main() {
       }
     }),
     // Mesas en Bar
-    prisma.table.create({
-      data: {
+    prisma.table.upsert({
+      where: { number: 5 },
+      update: {},
+      create: {
         number: 5,
         capacity: 2,
-        status: 'AVAILABLE',
+        status: 'LIBRE',
         location: 'Bar',
         active: true,
         zoneId: zones[2].id,
@@ -279,25 +289,25 @@ async function main() {
   // Crear algunos pedidos de ejemplo
   const order1 = await prisma.order.create({
     data: {
-      status: 'COMPLETED',
+      status: 'DELIVERED',
       total: 33.97,
       type: 'KITCHEN',
       userId: waiter.id,
       tableId: tables[0].id,
       paymentStatus: 'PAID',
-      paymentMethod: 'CARD',
+      paymentMethod: 'CREDIT_CARD',
       items: {
         create: [
           {
             quantity: 1,
             price: 8.99,
-            status: 'COMPLETED',
+            status: 'DELIVERED',
             productId: products[0].id
           },
           {
             quantity: 1,
             price: 24.99,
-            status: 'COMPLETED',
+            status: 'DELIVERED',
             productId: products[2].id
           }
         ]
@@ -354,11 +364,64 @@ async function main() {
       data: {
         productId: product.id,
         quantity: product.stock,
-        type: 'INITIAL',
+        type: 'IN',
         alertThreshold: Math.floor(product.stock * 0.2)
       }
     })
   ));
+
+  const defaultEmail = 'default@restbar.com';
+
+  // 1. Busca o crea el usuario por defecto
+  let user = await prisma.user.findUnique({
+    where: { email: defaultEmail }
+  });
+
+  if (!user) {
+    user = await prisma.user.create({
+      data: {
+        email: defaultEmail,
+        password: await bcrypt.hash('default123', 10),
+        name: 'Cliente Mostrador',
+        role: 'WAITER', // O el rol que prefieras para clientes
+        active: true
+      }
+    });
+  }
+
+  // 2. Busca o crea el CustomerProfile asociado a ese usuario
+  let customer = await prisma.customerProfile.findUnique({
+    where: { userId: user.id }
+  });
+
+  if (!customer) {
+    customer = await prisma.customerProfile.create({
+      data: {
+        userId: user.id,
+        loyaltyPoints: 0
+      }
+    });
+    console.log('Cliente por defecto creado:', customer);
+  } else {
+    console.log('Cliente por defecto ya existe:', customer);
+  }
+
+  // Cliente por defecto en la tabla Client
+  let defaultClient = await prisma.client.findUnique({
+    where: { email: 'default@restbar.com' }
+  });
+
+  if (!defaultClient) {
+    defaultClient = await prisma.client.create({
+      data: {
+        fullName: 'Cliente Mostrador',
+        email: 'default@restbar.com'
+      }
+    });
+    console.log('Cliente por defecto creado en Client:', defaultClient);
+  } else {
+    console.log('Cliente por defecto ya existe en Client:', defaultClient);
+  }
 
   console.log('Datos de prueba cargados exitosamente');
 }

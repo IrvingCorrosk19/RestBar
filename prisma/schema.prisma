@@ -22,6 +22,7 @@ model User {
   customerProfile   CustomerProfile?
   staffProfile      StaffProfile?
   performance       StaffPerformance[]
+  tables            Table[]           @relation("TableWaiter")
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
 }
@@ -103,18 +104,26 @@ model Table {
   id                String            @id @default(uuid())
   number            Int               @unique
   capacity          Int
-  status            TableStatus       @default(AVAILABLE)
+  status            TableStatus       @default(LIBRE)
   location          String?
   active            Boolean           @default(true)
+  cuentaAbierta     Boolean           @default(false)
+  horaInicio        DateTime?
+  usuarioId         String?
+  usuarioActual     User?             @relation("TableWaiter", fields: [usuarioId], references: [id], onDelete: SetNull)
   orders            Order[]
   reservations      Reservation[]
-  zone              Zone?             @relation(fields: [zoneId], references: [id])
+  zone              Zone?             @relation(fields: [zoneId], references: [id], onDelete: SetNull)
   zoneId            String?
-  x                 Float?            // Posición X en el plano
-  y                 Float?            // Posición Y en el plano
+  x                 Float?
+  y                 Float?
   accounts          Account[]
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
+
+  @@index([status])
+  @@index([usuarioId])
+  @@index([zoneId])
 }
 
 model Zone {
@@ -143,6 +152,8 @@ model Order {
   paymentMethod     PaymentMethod?
   customerProfile   CustomerProfile?  @relation(fields: [customerId], references: [id])
   customerId        String?
+  client            Client?           @relation(fields: [clientId], references: [id])
+  clientId          String?
   feedback          Feedback?
   account           Account?          @relation(fields: [accountId], references: [id])
   accountId         String?
@@ -339,6 +350,8 @@ model Client {
   notes           String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+
+  orders          Order[]   // Relación inversa con Order
 }
 
 enum Role {
@@ -358,10 +371,11 @@ enum Department {
 }
 
 enum TableStatus {
-  AVAILABLE
-  OCCUPIED
-  RESERVED
-  MAINTENANCE
+  LIBRE
+  OCUPADA
+  EN_PEDIDO
+  EN_CUENTA
+  CERRADA
 }
 
 enum OrderStatus {

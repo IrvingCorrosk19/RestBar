@@ -3,10 +3,11 @@ const prisma = new PrismaClient();
 
 // Tipos de pedido
 const ORDER_TYPES = {
-  TABLE: 'TABLE',           // Pedido para mesa
-  BAR: 'BAR',              // Pedido en barra
-  PERSONAL: 'PERSONAL',     // Pedido personal
-  TAKEAWAY: 'TAKEAWAY'     // Pedido para llevar
+  KITCHEN: 'KITCHEN',     // Pedido para cocina
+  BAR: 'BAR',            // Pedido en barra
+  TABLE: 'TABLE',        // Pedido para mesa
+  PERSONAL: 'PERSONAL',   // Pedido personal
+  TAKEAWAY: 'TAKEAWAY'   // Pedido para llevar
 };
 
 // Estados de pago

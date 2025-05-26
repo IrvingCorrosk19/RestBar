@@ -16,6 +16,7 @@ const invoiceRoutes = require('./routes/invoice');
 const notificationRoutes = require('./routes/notification');
 const dashboardRoutes = require('./routes/dashboard');
 const clientRoutes = require('./routes/client');
+const jwt = require('jsonwebtoken');
 
 const app = express();
 const httpServer = createServer(app);
@@ -25,6 +26,9 @@ const io = new Server(httpServer, {
     methods: ['GET', 'POST']
   }
 });
+
+// Hacer io disponible globalmente
+app.set('io', io);
 
 const prisma = new PrismaClient();
 
@@ -41,6 +45,18 @@ app.use((req, res, next) => {
 // Socket.io connection
 io.on('connection', (socket) => {
   console.log('Client connected');
+
+  // Manejar autenticación del socket
+  socket.on('authenticate', (token) => {
+    try {
+      const user = jwt.verify(token, process.env.JWT_SECRET);
+      socket.user = user;
+      console.log(`Usuario autenticado en socket: ${user.email}`);
+    } catch (error) {
+      console.error('Error de autenticación en socket:', error);
+      socket.disconnect();
+    }
+  });
 
   socket.on('disconnect', () => {
     console.log('Client disconnected');

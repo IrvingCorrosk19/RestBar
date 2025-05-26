@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const categoryController = require('../controllers/categoryController');
-const { authenticateToken, authorizeRoles } = require('../middleware/auth');
+const { authenticateToken, authorize } = require('../middleware/auth');
 
 // Todas las rutas requieren autenticación y rol ADMIN
-router.use(authenticateToken, authorizeRoles('ADMIN'));
+router.use(authenticateToken, authorize('ADMIN'));
 
 router.get('/', categoryController.getAll);
 router.post('/', categoryController.create);

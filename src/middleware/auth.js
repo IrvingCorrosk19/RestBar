@@ -1,35 +1,39 @@
 const jwt = require('jsonwebtoken');
 
-function authenticateToken(req, res, next) {
-  console.log('Headers recibidos:', req.headers); // Debug log
+exports.authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
-  console.log('Auth header:', authHeader); // Debug log
+  console.log('[AUTH] Header recibido:', authHeader);
   const token = authHeader && authHeader.split(' ')[1];
-  console.log('Token extraído:', token); // Debug log
 
   if (!token) {
-    console.log('No se encontró token en la petición'); // Debug log
-    return res.status(401).json({ message: 'Token requerido' });
+    console.log('[AUTH] Token no proporcionado');
+    return res.status(401).json({ message: 'Token no proporcionado' });
   }
 
-  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-    if (err) {
-      console.log('Error al verificar token:', err.message); // Debug log
-      return res.status(403).json({ message: 'Token inválido o expirado' });
-    }
-    console.log('Usuario autenticado:', user); // Debug log
+  try {
+    const user = jwt.verify(token, process.env.JWT_SECRET);
     req.user = user;
-    next();
-  });
-}
-
-function authorizeRoles(...roles) {
-  return (req, res, next) => {
-    if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ message: 'No tienes permisos para esta acción' });
+    // Asegurarnos de que req.io esté disponible
+    if (!req.io && req.app.get('io')) {
+      req.io = req.app.get('io');
     }
+    next();
+  } catch (error) {
+    console.log('[AUTH] Token inválido:', error.message);
+    return res.status(403).json({ message: 'Token inválido' });
+  }
+};
+
+exports.authorize = (...roles) => {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ message: 'No autenticado' });
+    }
+
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({ message: 'No autorizado' });
+    }
+
     next();
   };
-}
-
-module.exports = { authenticateToken, authorizeRoles }; 
+}; 

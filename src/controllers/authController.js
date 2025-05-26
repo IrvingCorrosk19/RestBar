@@ -35,11 +35,17 @@ exports.login = async (req, res) => {
       return res.status(401).json({ message: 'Usuario o contraseña incorrectos' });
     }
     let token;
+    let refreshToken;
     try {
       token = jwt.sign(
         { id: user.id, email: user.email, role: user.role, name: user.name },
         process.env.JWT_SECRET,
-        { expiresIn: '8h' }
+        { expiresIn: '24h' }
+      );
+      refreshToken = jwt.sign(
+        { id: user.id },
+        process.env.JWT_SECRET,
+        { expiresIn: '7d' }
       );
     } catch (jwtError) {
       console.error('Error al firmar el token:', jwtError);
@@ -47,6 +53,7 @@ exports.login = async (req, res) => {
     }
     const response = {
       token,
+      refreshToken,
       user: {
         id: user.id,
         email: user.email,
@@ -60,4 +67,48 @@ exports.login = async (req, res) => {
     console.error('Error inesperado en login:', error);
     res.status(500).json({ message: 'Error en el servidor', error: error.message });
   }
-}; 
+};
+
+exports.refreshToken = async (req, res) => {
+  const { refreshToken } = req.body;
+  
+  if (!refreshToken) {
+    return res.status(400).json({ message: 'Refresh token requerido' });
+  }
+
+  try {
+    const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET);
+    const user = await prisma.user.findUnique({ where: { id: decoded.id } });
+
+    if (!user || !user.active) {
+      return res.status(401).json({ message: 'Usuario no encontrado o inactivo' });
+    }
+
+    const newToken = jwt.sign(
+      { id: user.id, email: user.email, role: user.role, name: user.name },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    const newRefreshToken = jwt.sign(
+      { id: user.id },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.json({
+      token: newToken,
+      refreshToken: newRefreshToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    return res.status(401).json({ message: 'Refresh token inválido' });
+  }
+};
+
+module.exports = exports; 

@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
+const { authenticateToken, authorize } = require('../middleware/auth');
 const productController = require('../controllers/productController');
-const { authenticateToken, authorizeRoles } = require('../middleware/auth');
 
 // Todas las rutas requieren autenticación y rol ADMIN
-router.use(authenticateToken, authorizeRoles('ADMIN'));
+router.use(authenticateToken, authorize('ADMIN'));
 
 router.get('/', productController.getAll);
 router.post('/', productController.create);
